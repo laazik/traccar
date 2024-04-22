@@ -19,13 +19,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Connection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
+import org.traccar.helper.AmqpClient;
 import org.traccar.helper.AmqpConnectionManager;
 
 import java.io.IOException;
 
 public class PositionForwarderAmqp implements PositionForwarder {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PositionForwarderAmqp.class);
 
     private final AmqpClient amqpClient;
     private final ObjectMapper objectMapper;
@@ -37,6 +42,11 @@ public class PositionForwarderAmqp implements PositionForwarder {
 
 
         this.objectMapper = objectMapper;
+
+        LOGGER.atDebug()
+                .setMessage("Creating connection to RabbitMQ. URL = {}, Exchange = {}, Topic = {}")
+                .addArgument(connectionUrl).addArgument(exchange).addArgument(topic).log();
+
         Connection connection = connectionManager.createConnection(connectionUrl);
         amqpClient = new AmqpClient(connection, exchange, topic);
 
@@ -55,8 +65,12 @@ public class PositionForwarderAmqp implements PositionForwarder {
         try {
             String value = objectMapper.writeValueAsString(positionData);
             amqpClient.publishMessage(value);
+            LOGGER.atDebug()
+                    .setMessage("Published forward: {}").addArgument(value).log();
             resultHandler.onResult(true, null);
         } catch (IOException e) {
+            LOGGER.atWarn()
+                    .setMessage("Failed position forwarding.").setCause(e).log();
             resultHandler.onResult(false, e);
         }
     }

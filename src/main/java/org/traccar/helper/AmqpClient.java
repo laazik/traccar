@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.traccar.forward;
+package org.traccar.helper;
 
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.MessageProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -27,12 +29,15 @@ public class AmqpClient {
     private final String exchange;
     private final String topic;
 
-    AmqpClient(Connection connection, String exchange, String topic) {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AmqpClient.class);
+
+    public AmqpClient(Connection connection, String exchange, String topic) {
         this.exchange = exchange;
         this.topic = topic;
         try {
             channel = connection.createChannel();
         } catch (IOException e) {
+            LOGGER.error("RabbitMQ connection establisment failed.", e);
             throw new RuntimeException("Error while establishing connection to RabbitMQ broker", e);
         }
     }
@@ -45,6 +50,7 @@ public class AmqpClient {
         try {
             channel.exchangeDeclare(this.exchange, exchangeType, durable);
         } catch (IOException e) {
+            LOGGER.error("Failed declaring exchange in RabbitMQ. Already exists or no rights?", e);
             throw new RuntimeException("Unable to declare RabbitMQ exchange.", e);
         }
     }

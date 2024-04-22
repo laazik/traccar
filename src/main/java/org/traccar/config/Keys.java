@@ -1253,6 +1253,21 @@ public final class Keys {
             "notificator.telegram.chatId",
             List.of(KeyType.CONFIG));
 
+    public static final ConfigKey<String> NOTIFICATOR_AMQP_URL = new StringConfigKey(
+            "notificator.amqp.url",
+            List.of(KeyType.CONFIG, KeyType.USER)
+    );
+
+    public static final ConfigKey<String> NOTIFICATOR_AMQP_EXCHANGE = new StringConfigKey(
+            "notificator.amqp.exchange",
+            List.of(KeyType.CONFIG, KeyType.USER)
+    );
+
+    public static final ConfigKey<String> NOTIFICATOR_AMQP_TOPIC = new StringConfigKey(
+            "notificator.amqp.topic",
+            List.of(KeyType.CONFIG, KeyType.USER)
+    );
+
     /**
      * Telegram notification send location message.
      */
