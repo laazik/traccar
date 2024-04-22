@@ -18,8 +18,10 @@ package org.traccar.forward;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.rabbitmq.client.BuiltinExchangeType;
+import com.rabbitmq.client.Connection;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
+import org.traccar.helper.AmqpConnectionManager;
 
 import java.io.IOException;
 
@@ -28,13 +30,16 @@ public class EventForwarderAmqp implements EventForwarder {
     private final AmqpClient amqpClient;
     private final ObjectMapper objectMapper;
 
-    public EventForwarderAmqp(Config config, ObjectMapper objectMapper) {
+    public EventForwarderAmqp(Config config, ObjectMapper objectMapper, AmqpConnectionManager connectionManager) {
         String connectionUrl = config.getString(Keys.EVENT_FORWARD_URL);
         String exchange = config.getString(Keys.EVENT_FORWARD_EXCHANGE);
         String topic = config.getString(Keys.EVENT_FORWARD_TOPIC);
 
         this.objectMapper = objectMapper;
-        amqpClient = new AmqpClient(connectionUrl, exchange, topic);
+
+        Connection connection = connectionManager.createConnection(connectionUrl);
+
+        amqpClient = new AmqpClient(connection, exchange, topic);
 
         if (config.getBoolean(Keys.EVENT_FORWARD_AMQP_EXCHANGE_DECLARE)) {
             String exchangeType = config.getString(

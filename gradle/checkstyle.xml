@@ -14,7 +14,7 @@
 
     <module name="SuppressionFilter">
         <property name="file" value="${config_loc}/suppressions.xml"/>
-        < property name="optional" value="true"/>
+        <property name="optional" value="true"/>
     </module>
 
     <!--<property name="fileExtensions" value="java, properties, xml"/>-->

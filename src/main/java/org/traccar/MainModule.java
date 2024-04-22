@@ -78,6 +78,7 @@ import org.traccar.handler.GeocoderHandler;
 import org.traccar.handler.GeolocationHandler;
 import org.traccar.handler.SpeedLimitHandler;
 import org.traccar.handler.TimeHandler;
+import org.traccar.helper.AmqpConnectionManager;
 import org.traccar.helper.ObjectMapperContextResolver;
 import org.traccar.helper.SanitizerModule;
 import org.traccar.helper.WebHelper;
@@ -386,12 +387,17 @@ public class MainModule extends AbstractModule {
 
     @Singleton
     @Provides
-    public static EventForwarder provideEventForwarder(Config config, Client client, ObjectMapper objectMapper) {
+    public static EventForwarder provideEventForwarder(
+            Config config,
+            Client client,
+            ObjectMapper objectMapper,
+            Injector injector) {
         if (config.hasKey(Keys.EVENT_FORWARD_URL)) {
             String forwardType = config.getString(Keys.EVENT_FORWARD_TYPE);
             switch (forwardType) {
                 case "amqp":
-                    return new EventForwarderAmqp(config, objectMapper);
+                    AmqpConnectionManager connMgr  = injector.getInstance(AmqpConnectionManager.class);
+                    return new EventForwarderAmqp(config, objectMapper, connMgr);
                 case "kafka":
                     return new EventForwarderKafka(config, objectMapper);
                 case "mqtt":
@@ -406,13 +412,18 @@ public class MainModule extends AbstractModule {
 
     @Singleton
     @Provides
-    public static PositionForwarder providePositionForwarder(Config config, Client client, ObjectMapper objectMapper) {
+    public static PositionForwarder providePositionForwarder(
+            Config config,
+            Client client,
+            ObjectMapper objectMapper,
+            Injector injector) {
         if (config.hasKey(Keys.FORWARD_URL)) {
             switch (config.getString(Keys.FORWARD_TYPE)) {
                 case "json":
                     return new PositionForwarderJson(config, client, objectMapper);
                 case "amqp":
-                    return new PositionForwarderAmqp(config, objectMapper);
+                    AmqpConnectionManager connMgr = injector.getInstance(AmqpConnectionManager.class);
+                    return new PositionForwarderAmqp(config, objectMapper, connMgr);
                 case "kafka":
                     return new PositionForwarderKafka(config, objectMapper);
                 case "mqtt":
@@ -439,4 +450,10 @@ public class MainModule extends AbstractModule {
         return velocityEngine;
     }
 
+    @Singleton
+    @Provides
+    public static AmqpConnectionManager provideAmqpConnectionManager(Config config) {
+        AmqpConnectionManager connectionManager = new AmqpConnectionManager(config);
+        return connectionManager;
+    }
 }

@@ -18,52 +18,21 @@ package org.traccar.forward;
 import com.rabbitmq.client.BuiltinExchangeType;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.MessageProperties;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.TimeoutException;
-
-import org.traccar.helper.AmqpConnectionStorage;
 
 public class AmqpClient {
     private final Channel channel;
     private final String exchange;
     private final String topic;
 
-    AmqpClient(String connectionUrl, String exchange, String topic) {
+    AmqpClient(Connection connection, String exchange, String topic) {
         this.exchange = exchange;
         this.topic = topic;
-        Connection connection = null;
-
         try {
-            // AMQP/RabbitMQ best practice states that the connections should be long-lived and
-            // channels short-lived. There is no reason to establish several connections to the same
-            // RabbitMQ host (identified by the URL through same uname:pwd/host:port)
-
-            if (AmqpConnectionStorage.get(connectionUrl) == null) {
-                synchronized (AmqpClient.class) {
-                    if (AmqpConnectionStorage.get(connectionUrl) == null) {
-                        ConnectionFactory factory = new ConnectionFactory();
-                        factory.setUri(connectionUrl);
-                        connection = factory.newConnection();
-                        AmqpConnectionStorage.put(connectionUrl, connection);
-                    }
-                }
-            }
-
-            connection = AmqpConnectionStorage.get(connectionUrl);
             channel = connection.createChannel();
-            channel.exchangeDeclare(exchange, BuiltinExchangeType.TOPIC, true);
-        } catch (
-                NoSuchAlgorithmException
-                | URISyntaxException
-                | KeyManagementException
-                | IOException
-                | TimeoutException e) {
+        } catch (IOException e) {
             throw new RuntimeException("Error while establishing connection to RabbitMQ broker", e);
         }
     }
