@@ -12,6 +12,11 @@
         <property name="checks" value=".*"/>
     </module>
 
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/suppressions.xml"/>
+        < property name="optional" value="true"/>
+    </module>
+
     <!--<property name="fileExtensions" value="java, properties, xml"/>-->
 
     <!-- Checks whether files end with a new line.                        -->

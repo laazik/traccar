@@ -949,6 +949,16 @@ public final class Keys {
             List.of(KeyType.CONFIG),
             100);
 
+    public static final ConfigKey<Boolean> FORWARD_AMQP_EXCHANGE_DECLARE = new BooleanConfigKey(
+            "forward.amqp.exchange.declare", List.of(KeyType.CONFIG));
+
+
+    public static final ConfigKey<String> FORWARD_AMQP_EXCHANGE_TYPE = new StringConfigKey(
+            "forward.amqp.exchange.type", List.of(KeyType.CONFIG));
+
+    public static final ConfigKey<Boolean> FORWARD_AMQP_EXCHANGE_DURABLE = new BooleanConfigKey(
+            "forward.amqp.exchange.durable", List.of(KeyType.CONFIG));
+
     /**
      * Events forwarding format. Available options are "json" and "kafka". Default is "json".
      */
@@ -988,6 +998,16 @@ public final class Keys {
     public static final ConfigKey<String> EVENT_FORWARD_HEADERS = new StringConfigKey(
             "event.forward.header",
             List.of(KeyType.CONFIG));
+
+    public static final ConfigKey<Boolean> EVENT_FORWARD_AMQP_EXCHANGE_DECLARE = new BooleanConfigKey(
+            "event.forward.amqp.exchange.declare",  List.of(KeyType.CONFIG));
+
+    public static final ConfigKey<String> EVENT_FORWARD_AMQP_EXCHANGE_TYPE = new StringConfigKey(
+            "event.forward.amqp.exchange.type", List.of(KeyType.CONFIG));
+
+    public static final ConfigKey<Boolean> EVENT_FORWARD_AMQP_EXCHANGE_DURABLE = new BooleanConfigKey(
+            "event.forward.amqp.exchange.durable", List.of(KeyType.CONFIG));
+
 
     /**
      * Root folder for all template files.

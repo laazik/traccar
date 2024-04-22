@@ -17,6 +17,7 @@ package org.traccar.forward;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.rabbitmq.client.BuiltinExchangeType;
 import org.traccar.config.Config;
 import org.traccar.config.Keys;
 
@@ -31,8 +32,19 @@ public class PositionForwarderAmqp implements PositionForwarder {
         String connectionUrl = config.getString(Keys.FORWARD_URL);
         String exchange = config.getString(Keys.FORWARD_EXCHANGE);
         String topic = config.getString(Keys.FORWARD_TOPIC);
-        amqpClient = new AmqpClient(connectionUrl, exchange, topic);
+
+
         this.objectMapper = objectMapper;
+        amqpClient = new AmqpClient(connectionUrl, exchange, topic);
+
+        if (config.getBoolean(Keys.FORWARD_AMQP_EXCHANGE_DECLARE)) {
+            String exchangeType = config.getString(
+                    config.getString(Keys.FORWARD_AMQP_EXCHANGE_TYPE),
+                    BuiltinExchangeType.TOPIC.toString());
+            boolean durable = config.getBoolean(Keys.FORWARD_AMQP_EXCHANGE_DURABLE);
+
+            amqpClient.declareExchange(BuiltinExchangeType.valueOf(exchangeType), durable);
+        }
     }
 
     @Override

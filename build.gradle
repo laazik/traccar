@@ -15,6 +15,7 @@ jar.destinationDirectory = file("$projectDir/target")
 
 checkstyle {
     toolVersion = "10.15.0"
+    configDirectory.set(file("gradle"))
     configFile = "gradle/checkstyle.xml" as File
     checkstyleTest.enabled = false
 }

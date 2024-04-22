@@ -27,6 +27,8 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.TimeoutException;
 
+import org.traccar.helper.AmqpConnectionStorage;
+
 public class AmqpClient {
     private final Channel channel;
     private final String exchange;
@@ -35,24 +37,46 @@ public class AmqpClient {
     AmqpClient(String connectionUrl, String exchange, String topic) {
         this.exchange = exchange;
         this.topic = topic;
-
-        ConnectionFactory factory = new ConnectionFactory();
-        try {
-            factory.setUri(connectionUrl);
-        } catch (NoSuchAlgorithmException | URISyntaxException | KeyManagementException e) {
-            throw new RuntimeException("Error while setting URI for RabbitMQ connection factory", e);
-        }
+        Connection connection = null;
 
         try {
-            Connection connection = factory.newConnection();
+            // AMQP/RabbitMQ best practice states that the connections should be long-lived and
+            // channels short-lived. There is no reason to establish several connections to the same
+            // RabbitMQ host (identified by the URL through same uname:pwd/host:port)
+
+            if (AmqpConnectionStorage.get(connectionUrl) == null) {
+                synchronized (AmqpClient.class) {
+                    if (AmqpConnectionStorage.get(connectionUrl) == null) {
+                        ConnectionFactory factory = new ConnectionFactory();
+                        factory.setUri(connectionUrl);
+                        connection = factory.newConnection();
+                        AmqpConnectionStorage.put(connectionUrl, connection);
+                    }
+                }
+            }
+
+            connection = AmqpConnectionStorage.get(connectionUrl);
             channel = connection.createChannel();
             channel.exchangeDeclare(exchange, BuiltinExchangeType.TOPIC, true);
-        } catch (IOException | TimeoutException e) {
-            throw new RuntimeException("Error while creating and configuring RabbitMQ channel", e);
+        } catch (
+                NoSuchAlgorithmException
+                | URISyntaxException
+                | KeyManagementException
+                | IOException
+                | TimeoutException e) {
+            throw new RuntimeException("Error while establishing connection to RabbitMQ broker", e);
         }
     }
 
     public void publishMessage(String message) throws IOException {
         channel.basicPublish(exchange, topic, MessageProperties.PERSISTENT_TEXT_PLAIN, message.getBytes());
+    }
+
+    public void declareExchange(BuiltinExchangeType exchangeType, boolean durable) {
+        try {
+            channel.exchangeDeclare(this.exchange, exchangeType, durable);
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to declare RabbitMQ exchange.", e);
+        }
     }
 }
