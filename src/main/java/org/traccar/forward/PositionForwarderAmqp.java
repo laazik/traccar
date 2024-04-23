@@ -46,17 +46,20 @@ public class PositionForwarderAmqp implements PositionForwarder {
         LOGGER.atDebug()
                 .setMessage("Creating connection to RabbitMQ. URL = {}, Exchange = {}, Topic = {}")
                 .addArgument(connectionUrl).addArgument(exchange).addArgument(topic).log();
+        try {
+            Connection connection = connectionManager.createConnection(connectionUrl);
+            amqpClient = new AmqpClient(connection, exchange, topic);
 
-        Connection connection = connectionManager.createConnection(connectionUrl);
-        amqpClient = new AmqpClient(connection, exchange, topic);
+            if (config.getBoolean(Keys.FORWARD_AMQP_EXCHANGE_DECLARE)) {
+                String exchangeType = config.getString(
+                        Keys.FORWARD_AMQP_EXCHANGE_TYPE,
+                        BuiltinExchangeType.TOPIC.toString());
+                boolean durable = config.getBoolean(Keys.FORWARD_AMQP_EXCHANGE_DURABLE);
 
-        if (config.getBoolean(Keys.FORWARD_AMQP_EXCHANGE_DECLARE)) {
-            String exchangeType = config.getString(
-                    config.getString(Keys.FORWARD_AMQP_EXCHANGE_TYPE),
-                    BuiltinExchangeType.TOPIC.toString());
-            boolean durable = config.getBoolean(Keys.FORWARD_AMQP_EXCHANGE_DURABLE);
-
-            amqpClient.declareExchange(BuiltinExchangeType.valueOf(exchangeType), durable);
+                amqpClient.declareExchange(BuiltinExchangeType.valueOf(exchangeType), durable);
+            }
+        } catch (AmqpConnectionManager.AmqpConnectionManagerException e) {
+            throw new RuntimeException("Unable to initialize connection to RabbitMQ", e);
         }
     }
 

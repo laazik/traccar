@@ -453,7 +453,6 @@ public class MainModule extends AbstractModule {
     @Singleton
     @Provides
     public static AmqpConnectionManager provideAmqpConnectionManager(Config config) {
-        AmqpConnectionManager connectionManager = new AmqpConnectionManager(config);
-        return connectionManager;
+        return new AmqpConnectionManager(config);
     }
 }

@@ -37,7 +37,7 @@ public class AmqpClient {
         try {
             channel = connection.createChannel();
         } catch (IOException e) {
-            LOGGER.error("RabbitMQ connection establisment failed.", e);
+            LOGGER.error("RabbitMQ connection establishment failed.", e);
             throw new RuntimeException("Error while establishing connection to RabbitMQ broker", e);
         }
     }

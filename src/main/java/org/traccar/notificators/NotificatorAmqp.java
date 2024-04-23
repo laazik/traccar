@@ -22,9 +22,8 @@ public class NotificatorAmqp extends Notificator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificatorAmqp.class);
 
-    private final Config config;
     private final AmqpClient amqpClient;
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     @Inject
     public NotificatorAmqp(
@@ -36,7 +35,6 @@ public class NotificatorAmqp extends Notificator {
         super(notificationFormatter, templatePath);
 
         this.objectMapper = objectMapper;
-        this.config = config;
 
         String connectionUrl = config.getString(Keys.NOTIFICATOR_AMQP_URL);
         String exchange = config.getString(Keys.NOTIFICATOR_AMQP_EXCHANGE);
@@ -45,12 +43,31 @@ public class NotificatorAmqp extends Notificator {
                 .setMessage("Creating connection to RabbitMQ. URL = {}, Exchange = {}, Topic = {}")
                 .addArgument(connectionUrl).addArgument(exchange).addArgument(topic).log();
 
-        Connection connection = amqpConnectionManager.createConnection(connectionUrl);
-        amqpClient = new AmqpClient(connection, exchange, topic);
+        // As notifications can be user configurable, it makes no sense to throw runtime exception here when the
+        // whole connection establishment fails. Thus in this case initialize the client to null AND
+        // do a null check when sending.
+        AmqpClient client;
+        try {
+            Connection connection = amqpConnectionManager.createConnection(connectionUrl);
+            client = new AmqpClient(connection, exchange, topic);
+        } catch (AmqpConnectionManager.AmqpConnectionManagerException e) {
+            LOGGER.atWarn()
+                    .setMessage("Unable to create connection to RabbitMQ host. URL={}")
+                    .addArgument(connectionUrl).setCause(e).log();
+            client = null;
+        }
+        amqpClient = client;
     }
 
     @Override
     public void send(User user, NotificationMessage message, Event event, Position position) throws MessageException {
+        if (amqpClient == null) {
+            LOGGER.atWarn()
+                    .setMessage("AMQP client initialization has failed. The message WILL NOT be sent.")
+                    .log();
+            return;
+        }
+
         try {
             String json = objectMapper.writeValueAsString(new AmqpNotificationObject(user, message, event, position));
             amqpClient.publishMessage(json);
@@ -63,7 +80,7 @@ public class NotificatorAmqp extends Notificator {
         }
     }
 
-    protected class AmqpNotificationObject {
+    protected static class AmqpNotificationObject {
         private final User user;
         private final NotificationMessage message;
         private final Event event;
