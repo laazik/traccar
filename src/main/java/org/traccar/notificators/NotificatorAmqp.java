@@ -10,11 +10,11 @@ import org.traccar.config.Keys;
 import org.traccar.helper.AmqpClient;
 import org.traccar.helper.AmqpConnectionManager;
 import org.traccar.model.Event;
+import org.traccar.model.Notification;
 import org.traccar.model.Position;
 import org.traccar.model.User;
 import org.traccar.notification.MessageException;
 import org.traccar.notification.NotificationFormatter;
-import org.traccar.notification.NotificationMessage;
 
 import java.io.IOException;
 
@@ -32,7 +32,7 @@ public class NotificatorAmqp extends Notificator {
             AmqpConnectionManager amqpConnectionManager,
             ObjectMapper objectMapper,
             Config config) {
-        super(notificationFormatter, templatePath);
+        super(null, null);
 
         this.objectMapper = objectMapper;
 
@@ -60,7 +60,7 @@ public class NotificatorAmqp extends Notificator {
     }
 
     @Override
-    public void send(User user, NotificationMessage message, Event event, Position position) throws MessageException {
+    public void send(Notification notification, User user, Event event, Position position) throws MessageException {
         if (amqpClient == null) {
             LOGGER.atWarn()
                     .setMessage("AMQP client initialization has failed. The message WILL NOT be sent.")
@@ -69,24 +69,27 @@ public class NotificatorAmqp extends Notificator {
         }
 
         try {
-            String json = objectMapper.writeValueAsString(new AmqpNotificationObject(user, message, event, position));
+            String json = objectMapper
+                    .writeValueAsString(new AmqpNotificationObject(user, notification, event, position));
             amqpClient.publishMessage(json);
         } catch (IOException e) {
             LOGGER.atWarn()
-                    .setMessage("IOException when trying to publish notification. user = {}, message = {}, "
+                    .setMessage("IOException when trying to publish notification. user = {}, notification = {}, "
                             + "eventId = {}. positionId = {}")
-                    .addArgument(user.getId()).addArgument(message.getBody()).addArgument(event.getId())
-                    .addArgument(position.getId()).setCause(e).log();
+                    .addArgument(user.getId())
+                    .addArgument(notification.getId()).addArgument(event.getId())
+                    .addArgument(position.getId())
+                    .setCause(e).log();
         }
     }
 
     protected static class AmqpNotificationObject {
         private final User user;
-        private final NotificationMessage message;
+        private final Notification message;
         private final Event event;
         private final Position position;
 
-        public AmqpNotificationObject(User user, NotificationMessage message, Event event, Position position) {
+        public AmqpNotificationObject(User user, Notification message, Event event, Position position) {
             this.user = user;
             this.message = message;
             this.event = event;
@@ -97,7 +100,7 @@ public class NotificatorAmqp extends Notificator {
             return user;
         }
 
-        public NotificationMessage getMessage() {
+        public Notification getMessage() {
             return message;
         }
 
