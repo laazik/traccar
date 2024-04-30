@@ -32,14 +32,6 @@ public final class AmqpConnectionManager {
         this.config = config;
     }
 
-    public void put(String connectionUrl, Connection connection) {
-        if (AMQP_CONNECTIONS.containsKey((connectionUrl))) {
-            return;
-        }
-
-        AMQP_CONNECTIONS.put(connectionUrl, connection);
-    }
-
     /**
      * Creates new connection to RabbitMQ server which can be then used for further channel establishment. As the
      * RabbitMQ best practices state, connections contrary to channels are long-lived objects, so they are stored based
