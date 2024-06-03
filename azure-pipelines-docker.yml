@@ -25,3 +25,11 @@ steps:
       $(Build.BuildId)
       latest
 
+- task: Docker@2
+  inputs:
+    containerRegistry: 'regseithxyz.azurecr.io'
+    repository: 'traccar-rockit'
+    command: 'push'
+    tags: |
+      $(Build.BuildId)
+      latest
