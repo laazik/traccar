@@ -1,0 +1,27 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+resources:
+ repositories:
+   - repository: TraccarRockitDocker
+     name: Traccar.Rockit/Traccar.Rockit.Docker
+     ref: master
+     type: git
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- checkout: self
+- checkout: TraccarRockitDocker
+- task: Docker@2
+  inputs:
+    command: 'build'
+    Dockerfile: '**/Traccar.Rockit.Docker/Dockerfile'
+    buildContext: '**/..'
+    tags: |
+      $(Build.BuildId)
+      latest
+
