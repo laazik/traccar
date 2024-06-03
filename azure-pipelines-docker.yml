@@ -19,6 +19,8 @@ steps:
 - task: Docker@2
   inputs:
     command: 'build'
+    containerRegistry: 'regseithxyz.azurecr.io'
+    repository: 'traccar-rockit'
     Dockerfile: '**/Traccar.Rockit.Docker/Dockerfile'
     buildContext: '**/..'
     tags: |
