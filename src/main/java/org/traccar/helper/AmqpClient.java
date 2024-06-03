@@ -22,10 +22,16 @@ import com.rabbitmq.client.MessageProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class AmqpClient {
-    private final Channel channel;
+public class AmqpClient implements Closeable {
+
+    private static final AtomicInteger INSTANCE_COUNT = new AtomicInteger();
+
+    private Channel channel;
     private final String exchange;
     private final String topic;
 
@@ -36,6 +42,9 @@ public class AmqpClient {
         this.topic = topic;
         try {
             channel = connection.createChannel();
+            LOGGER.atInfo().setMessage("AmqpClient instance count = {}")
+                    .addArgument(INSTANCE_COUNT.incrementAndGet())
+                    .log();
         } catch (IOException e) {
             LOGGER.error("RabbitMQ connection establishment failed.", e);
             throw new RuntimeException("Error while establishing connection to RabbitMQ broker", e);
@@ -53,5 +62,22 @@ public class AmqpClient {
             LOGGER.error("Failed declaring exchange in RabbitMQ. Already exists or no rights?", e);
             throw new RuntimeException("Unable to declare RabbitMQ exchange.", e);
         }
+    }
+
+    public void close() {
+        try {
+            if (channel.isOpen()) {
+                channel.close();
+            }
+        } catch (IOException | TimeoutException e) {
+            LOGGER.atWarn()
+                    .setMessage("Got exception closing channel.")
+                    .setCause(e).log();
+        }
+
+        channel = null;
+        LOGGER.atInfo().setMessage("AmqpClient instance count = {}")
+                .addArgument(INSTANCE_COUNT.decrementAndGet())
+                .log();
     }
 }

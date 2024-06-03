@@ -1,5 +1,6 @@
 package org.traccar.notificators;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Connection;
 import jakarta.inject.Inject;
@@ -22,8 +23,12 @@ public class NotificatorAmqp extends Notificator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificatorAmqp.class);
 
-    private final AmqpClient amqpClient;
     private final ObjectMapper objectMapper;
+    private final String connectionUrl;
+    private final String exchange;
+    private final String topic;
+
+    private final AmqpConnectionManager connectionManager;
 
     @Inject
     public NotificatorAmqp(
@@ -36,43 +41,29 @@ public class NotificatorAmqp extends Notificator {
 
         this.objectMapper = objectMapper;
 
-        String connectionUrl = config.getString(Keys.NOTIFICATOR_AMQP_URL);
-        String exchange = config.getString(Keys.NOTIFICATOR_AMQP_EXCHANGE);
-        String topic = config.getString(Keys.NOTIFICATOR_AMQP_TOPIC);
+        this.connectionUrl = config.getString(Keys.NOTIFICATOR_AMQP_URL);
+        this.exchange = config.getString(Keys.NOTIFICATOR_AMQP_EXCHANGE);
+        this.topic = config.getString(Keys.NOTIFICATOR_AMQP_TOPIC);
+
+        this.connectionManager = amqpConnectionManager;
+
         LOGGER.atDebug()
                 .setMessage("Creating connection to RabbitMQ. URL = {}, Exchange = {}, Topic = {}")
-                .addArgument(connectionUrl).addArgument(exchange).addArgument(topic).log();
-
-        // As notifications can be user configurable, it makes no sense to throw runtime exception here when the
-        // whole connection establishment fails. Thus in this case initialize the client to null AND
-        // do a null check when sending.
-        AmqpClient client;
-        try {
-            Connection connection = amqpConnectionManager.createConnection(connectionUrl);
-            client = new AmqpClient(connection, exchange, topic);
-        } catch (AmqpConnectionManager.AmqpConnectionManagerException e) {
-            LOGGER.atWarn()
-                    .setMessage("Unable to create connection to RabbitMQ host. URL={}")
-                    .addArgument(connectionUrl).setCause(e).log();
-            client = null;
-        }
-        amqpClient = client;
+                .addArgument(this.connectionUrl).addArgument(this.exchange).addArgument(this.topic).log();
     }
 
     @Override
     public void send(Notification notification, User user, Event event, Position position) throws MessageException {
-        if (amqpClient == null) {
-            LOGGER.atWarn()
-                    .setMessage("AMQP client initialization has failed. The message WILL NOT be sent.")
-                    .log();
-            return;
-        }
+        AmqpClient amqpClient = null;
 
         try {
+            Connection connection = connectionManager.createConnection(connectionUrl);
+            amqpClient = new AmqpClient(connection, exchange, topic);
+
             String json = objectMapper
                     .writeValueAsString(new AmqpNotificationObject(user, notification, event, position));
             amqpClient.publishMessage(json);
-        } catch (IOException e) {
+        } catch (AmqpConnectionManager.AmqpConnectionManagerException | IOException e) {
             LOGGER.atWarn()
                     .setMessage("IOException when trying to publish notification. user = {}, notification = {}, "
                             + "eventId = {}. positionId = {}")
@@ -80,6 +71,12 @@ public class NotificatorAmqp extends Notificator {
                     .addArgument(notification.getId()).addArgument(event.getId())
                     .addArgument(position.getId())
                     .setCause(e).log();
+
+            throw new MessageException(e);
+        } finally {
+            if (amqpClient != null) {
+                amqpClient.close();
+            }
         }
     }
 
@@ -95,19 +92,22 @@ public class NotificatorAmqp extends Notificator {
             this.event = event;
             this.position = position;
         }
-
+        @JsonProperty("user")
         public User getUser() {
             return user;
         }
 
+        @JsonProperty("notification")
         public Notification getMessage() {
             return message;
         }
 
+        @JsonProperty("event")
         public Event getEvent() {
             return event;
         }
 
+        @JsonProperty("position")
         public Position getPosition() {
             return position;
         }
