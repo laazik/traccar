@@ -19,6 +19,7 @@ steps:
 - task: Docker@2
   inputs:
     command: 'build'
+    arguments: branch=$(Build.SourceBranch)
     containerRegistry: 'regseithxyz.azurecr.io'
     repository: 'traccar-rockit'
     Dockerfile: '**/Traccar.Rockit.Docker/Dockerfile'
